@@ -15,7 +15,7 @@ st.set_page_config(page_title="YOLO Training Template", page_icon="🚀", layout
 # Sidebar navigation
 st.sidebar.title("YOLO Training Template")
 page = st.sidebar.radio(
-    "Select Page", ["Training", "Inference", "Preprocessing", "Auto-labeling"]
+    "Select Page", ["Training", "Inference", "Preprocessing", "Auto-labeling", "Export"]
 )
 
 if page == "Training":
@@ -310,6 +310,46 @@ elif page == "Preprocessing":
 
         finally:
             shutil.rmtree(temp_dir)
+
+elif page == "Export":
+    st.title("📤 Model Export")
+
+    model_file = st.file_uploader("Upload Model Weights", type=["pt"])
+    export_format = st.selectbox("Export Format", ["NCNN"])
+
+    if st.button("Export Model"):
+        if not model_file:
+            st.error("Please upload a model file.")
+            st.stop()
+
+        # Save model to temp
+        with tempfile.NamedTemporaryFile(suffix=".pt", delete=False) as temp_model:
+            temp_model.write(model_file.getvalue())
+            model_path = temp_model.name
+
+        # Run export
+        try:
+            from ultralytics import YOLO
+            model = YOLO(model_path)
+            if export_format == "NCNN":
+                exported_path = model.export(format='ncnn')
+                st.success("Model exported to NCNN!")
+                # Zip the output directory
+                if os.path.exists(exported_path):
+                    zip_path = "exported_model.zip"
+                    with zipfile.ZipFile(zip_path, 'w') as zipf:
+                        if os.path.isdir(exported_path):
+                            for root, dirs, files in os.walk(exported_path):
+                                for file in files:
+                                    zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), exported_path))
+                        else:
+                            zipf.write(exported_path, os.path.basename(exported_path))
+                    with open(zip_path, "rb") as f:
+                        st.download_button("Download Exported Model", f, file_name="model_ncnn.zip")
+                else:
+                    st.error("Export failed: output not found.")
+        except Exception as e:
+            st.error(f"Export failed: {str(e)}")
 
 elif page == "Auto-labeling":
     st.title("🏷️ Auto-labeling with GroundingDINO")

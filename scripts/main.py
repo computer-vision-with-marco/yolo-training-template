@@ -154,6 +154,14 @@ def train_model(yaml_path, epochs, imgsz, batch, device, project, name, weights=
         )
     return results
 
+def export_to_ncnn(model_path, output_path='model_ncnn'):
+    """Export the trained YOLO model to NCNN format."""
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model not found: {model_path}")
+    model = YOLO(model_path)
+    model.export(format='ncnn')
+    logging.info(f"Model exported to NCNN: {output_path}")
+
 def main():
     parser = argparse.ArgumentParser(description="Train YOLO on any Kaggle dataset")
     parser.add_argument('--dataset', required=True, help='Kaggle dataset handle, e.g., jocelyndumlao/multi-weather-pothole-detection-mwpd')
@@ -170,6 +178,7 @@ def main():
     parser.add_argument('--preprocess', action='store_true', help='Run data preprocessing (cleaning and augmentation) before training')
     parser.add_argument('--preprocess-config', type=str, default='preprocessing_config.yaml', help='Path to preprocessing config file')
     parser.add_argument('--augment-only', action='store_true', help='Only run augmentation, skip training')
+    parser.add_argument('--export-ncnn', action='store_true', help='Export trained model to NCNN format')
 
     args = parser.parse_args()
     names = [n.strip() for n in args.names.split(',')]
@@ -260,6 +269,9 @@ def main():
 
         if not args.augment_only:
             logging.info("Training completed successfully")
+            if args.export_ncnn:
+                best_model_path = os.path.join(args.project, args.name, "weights", "best.pt")
+                export_to_ncnn(best_model_path)
         else:
             logging.info("Augmentation completed successfully")
     except Exception as e:
