@@ -17,10 +17,10 @@ This repository provides a template for training YOLO models on any Kaggle datas
 
 1. Install dependencies: `pip install -r requirements.txt`
 2. For training: Run `python scripts/main.py --dataset <kaggle-handle> --nc <num-classes> --names <class-names>`
-<<<<<<< HEAD
 3. For training with preprocessing: Run `python scripts/main.py --dataset <kaggle-handle> --nc <num-classes> --names <class-names> --preprocess`
 4. For inference: Run `python scripts/inference.py --model <model-path> --input <image/video/webcam>`
 5. For the Streamlit app: Run `streamlit run streamlit_app.py`
+6. For non-technical setup: Please see [docs/QUICKSTART-GUIDE.md](docs/QUICKSTART-GUIDE.md)
 
 ## Data Preprocessing
 
@@ -55,10 +55,6 @@ augmentation:
       p: 0.5  # Probability
     # ... other transforms
 ```
-=======
-3. For inference: Run `python scripts/inference.py --model <model-path> --input <image/video/webcam>`
-4. For non-technical setup: Please see [docs/QUICKSTART-GUIDE.md](docs/QUICKSTART-GUIDE.md)
->>>>>>> 3d76be0b182bbda7e6dde9b0dd7762cbb9216eec
 
 ## Contributing
 
