@@ -99,7 +99,7 @@ def create_yaml(dataset_path, paths, nc, names):
     logging.info(f"Created YAML config at: {yaml_path}")
     return yaml_path
 
-def train_model(yaml_path, epochs, imgsz, batch, device, project, name, weights=None, resume=False):
+def train_model(yaml_path, epochs, imgsz, batch, device, project, name, weights=None, resume=False, base_model="yolov8m.pt"):
     """Train the YOLO model."""
     if resume:
         # Resume from last checkpoint
@@ -140,9 +140,9 @@ def train_model(yaml_path, epochs, imgsz, batch, device, project, name, weights=
             exist_ok=True,
         )
     else:
-        # Start fresh with pretrained YOLOv8
-        logging.info("Starting training with YOLOv8m pretrained weights...")
-        model = YOLO("yolov8m.pt")
+        # Start fresh with selected pretrained model
+        logging.info(f"Starting training with pretrained weights: {base_model}")
+        model = YOLO(base_model)
         results = model.train(
             data=yaml_path,
             epochs=epochs,
@@ -184,6 +184,11 @@ def main():
                         help='Project directory for runs')
     parser.add_argument('--name', default='yolo_train',
                         help='Experiment name')
+    parser.add_argument('--model', type=str, default='yolov8m.pt',
+                        help='Base model to train from (default: yolov8m.pt). '
+                             'Examples: yolov8n.pt, yolov8s.pt, yolov8m.pt, yolov8l.pt, yolov8x.pt, '
+                             'yolo11n.pt, yolo11s.pt, yolo11m.pt, yolo11l.pt, yolo11x.pt, '
+                             'yolo26n.pt, yolo26s.pt, yolo26m.pt, yolo26l.pt, yolo26x.pt')
     parser.add_argument('--weights', type=str, default=None,
                         help='Path to pretrained weights '
                              '(e.g., runs/train/yolo_train/weights/best.pt)')
@@ -246,7 +251,7 @@ def main():
             if not args.augment_only:
                 results = train_model(None, args.epochs, args.imgsz, args.batch,
                                     args.device, args.project, args.name, weights=None,
-                                    resume=True)
+                                    resume=True, base_model=args.model)
         else:
             dataset_path = download_dataset(args.dataset)
             logging.info(f"Dataset downloaded to: {dataset_path}")
@@ -293,7 +298,7 @@ def main():
                 yaml_path = create_yaml(dataset_path, paths, args.nc, names)
                 results = train_model(yaml_path, args.epochs, args.imgsz, args.batch,
                                     args.device, args.project, args.name, weights=args.weights,
-                                    resume=False)
+                                    resume=False, base_model=args.model)
 
         if not args.augment_only:
             logging.info("Training completed successfully")

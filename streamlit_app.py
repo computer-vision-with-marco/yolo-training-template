@@ -5,7 +5,9 @@ import tempfile
 import zipfile
 import shutil
 import sys
+import time
 import numpy as np
+import pandas as pd
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
 
@@ -56,6 +58,19 @@ if page == "Training":
         device = st.selectbox("Device", ["0", "cpu"], index=0)
         project = st.text_input("Project Directory", value="runs/train")
         name = st.text_input("Experiment Name", value="yolo_train")
+
+    # Model selection
+    st.subheader("Base Model")
+    model_family = st.radio("Model Family", ["YOLOv8", "YOLO11", "YOLO26"], horizontal=True)
+    family_prefix = {"YOLOv8": "yolov8", "YOLO11": "yolo11", "YOLO26": "yolo26"}[model_family]
+    model_variant = st.select_slider(
+        "Model Size",
+        options=["n", "s", "m", "l", "x"],
+        value="m",
+        help="n=nano (fastest), s=small, m=medium, l=large, x=extra-large (most accurate)"
+    )
+    base_model = f"{family_prefix}{model_variant}.pt"
+    st.caption(f"Selected: `{base_model}`")
 
     # Preprocessing options
     st.subheader("Preprocessing")
@@ -166,6 +181,8 @@ if page == "Training":
                 project,
                 "--name",
                 name,
+                "--model",
+                base_model,
             ]
         )
         if weights:
@@ -177,15 +194,81 @@ if page == "Training":
             if "augment_only" in locals() and augment_only:
                 cmd.append("--augment-only")
 
-        # Run command
+        # Launch training in the background
         st.info("Starting training...")
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.getcwd())
-        if result.returncode == 0:
-            st.success("Training completed successfully!")
-            st.text_area("Output", result.stdout, height=300)
+        results_csv = os.path.join(project, name, "results.csv")
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            cwd=os.getcwd(),
+        )
+
+        # ── Live dashboard ──────────────────────────────────────────
+        st.subheader("📈 Live Training Dashboard")
+
+        col_e, col_map50, col_map95, col_loss = st.columns(4)
+        metric_epoch  = col_e.empty()
+        metric_map50  = col_map50.empty()
+        metric_map95  = col_map95.empty()
+        metric_loss   = col_loss.empty()
+
+        tab_map, tab_loss, tab_pr = st.tabs(["mAP", "Loss", "Precision / Recall"])
+        with tab_map:
+            chart_map = st.empty()
+        with tab_loss:
+            chart_loss = st.empty()
+        with tab_pr:
+            chart_pr = st.empty()
+
+        status = st.empty()
+
+        while process.poll() is None:
+            if os.path.exists(results_csv):
+                try:
+                    df = pd.read_csv(results_csv)
+                    df.columns = df.columns.str.strip()
+                    if not df.empty:
+                        last = df.iloc[-1]
+                        metric_epoch.metric("Epoch", f"{int(last['epoch']) + 1} / {epochs}")
+                        metric_map50.metric("mAP50", f"{last['metrics/mAP50(B)']:.3f}")
+                        metric_map95.metric("mAP50-95", f"{last['metrics/mAP50-95(B)']:.3f}")
+                        metric_loss.metric("Box Loss (train)", f"{last['train/box_loss']:.4f}")
+
+                        chart_map.line_chart(
+                            df.rename(columns={
+                                "metrics/mAP50(B)":    "mAP50",
+                                "metrics/mAP50-95(B)": "mAP50-95",
+                            }).set_index("epoch")[["mAP50", "mAP50-95"]]
+                        )
+                        chart_loss.line_chart(
+                            df.rename(columns={
+                                "train/box_loss": "Train",
+                                "val/box_loss":   "Val",
+                            }).set_index("epoch")[["Train", "Val"]]
+                        )
+                        chart_pr.line_chart(
+                            df.rename(columns={
+                                "metrics/precision(B)": "Precision",
+                                "metrics/recall(B)":    "Recall",
+                            }).set_index("epoch")[["Precision", "Recall"]]
+                        )
+                except Exception:
+                    pass
+            status.info("Training in progress…")
+            time.sleep(3)
+
+        # ── Final result ────────────────────────────────────────────
+        stdout_output = process.stdout.read()
+        if process.returncode == 0:
+            status.success("Training completed successfully!")
+            with st.expander("Training log"):
+                st.text(stdout_output)
         else:
-            st.error("Training failed!")
-            st.text_area("Error", result.stderr, height=300)
+            status.error("Training failed!")
+            st.text_area("Error", stdout_output, height=300)
 
 elif page == "Inference":
     st.title("🔍 YOLO Inference")
