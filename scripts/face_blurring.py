@@ -60,4 +60,4 @@ while cap.isOpened():
 
 cap.release()
 cv2.destroyAllWindows()
-print("Done! Output saved as 'face_segmentation_blurring_output.mp4'")
+print("Done!")

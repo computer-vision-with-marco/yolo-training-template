@@ -8,7 +8,6 @@ import sys
 import numpy as np
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-from scripts.dataset_explorer import load_dataset, compute_dataset_stats, get_sample_images, draw_annotations
 
 sys.path.append("scripts")
 from preprocessing import YOLODataPreprocessor
@@ -398,7 +397,7 @@ elif page == "Dataset Explorer":
                     with col2:
                         st.metric("Total Annotations", stats['bbox_stats']['total_bboxes'])
                     with col3:
-                        st.metric("Avg BBoxes/Image", ".2f")
+                        st.metric("Avg BBoxes/Image", f"{stats['bbox_stats']['avg_bbox_per_image']:.2f}")
 
                     # Split information
                     st.markdown("#### Split Distribution")

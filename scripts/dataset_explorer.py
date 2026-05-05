@@ -157,7 +157,7 @@ def draw_annotations(image: np.ndarray, bboxes: List[Dict[str, Any]], class_name
         if class_names and class_id < len(class_names):
             label = class_names[class_id]
         if conf < 1.0:
-            label += ".2f"
+            label += f" {conf:.2f}"
 
         cv2.putText(img, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 

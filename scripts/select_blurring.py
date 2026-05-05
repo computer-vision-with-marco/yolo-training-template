@@ -42,6 +42,20 @@ display = np.zeros((h, total_width, 3), dtype=np.uint8)
 
 print("UI Ready! Click checkboxes to select body parts to blur. Press 'q' to quit.")
 
+
+def mouse_callback(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+        if x < panel_width:
+            for i in range(num_classes):
+                cy = 40 + i * 35
+                if 20 <= x <= 20 + checkbox_size and cy - 15 <= y <= cy + checkbox_size - 15:
+                    selected[i] = not selected[i]
+                    print(f"Toggled: {class_names[i]} → {'BLUR' if selected[i] else 'SHARP'}")
+
+
+cv2.namedWindow("Body Part Blur Selector (Click checkboxes!)")
+cv2.setMouseCallback("Body Part Blur Selector (Click checkboxes!)", mouse_callback)
+
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
@@ -87,18 +101,6 @@ while cap.isOpened():
     display[:, panel_width:] = blurred_frame
 
     cv2.imshow("Body Part Blur Selector (Click checkboxes!)", display)
-
-    # === Mouse callback to toggle checkboxes ===
-    def mouse_callback(event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            if x < panel_width:
-                for i in range(num_classes):
-                    cy = 40 + i * 35
-                    if 20 <= x <= 20 + checkbox_size and cy - 15 <= y <= cy + checkbox_size - 15:
-                        selected[i] = not selected[i]
-                        print(f"Toggled: {class_names[i]} → {'BLUR' if selected[i] else 'SHARP'}")
-
-    cv2.setMouseCallback("Body Part Blur Selector (Click checkboxes!)", mouse_callback)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break

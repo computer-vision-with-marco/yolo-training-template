@@ -146,6 +146,6 @@ Thumbs.db
 
 # YOLO specific
 runs/
-.mp4
-*.yaml  # Generated YAML configs
+*.mp4
+*_data.yaml
 *.pt    # Model weights (optional, if not committing)
